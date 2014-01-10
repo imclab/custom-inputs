@@ -1,0 +1,266 @@
+<polymer-element name="custom-input" attributes="value min max step type">
+<template>
+  <link href="custom-inputs.css" rel="stylesheet" type="text/css">
+</template>
+<script>
+  Polymer('custom-input', {
+    valueChanged: function() {
+      if (!this.initialized){
+        if (!this.type) {
+          if (typeof this.value == "boolean") this.type = "bool"
+          else if (typeof this.value == "number") this.type = "float"
+          else if (typeof this.value == "string") this.type = "string"
+          else if (this.value instanceof Array) {
+            if (this.value.length == 2) this.type = 'vec2'
+            if (this.value.length == 3) this.type = 'vec3'
+            if (this.value.length == 4) this.type = 'vec4'
+          }          
+        }
+        if (this.type) {
+          var custom_input = document.createElement('input-'+this.type)
+          custom_input.bindProperty('value', this, 'value')
+          custom_input.bindProperty('min', this, 'min')
+          custom_input.bindProperty('max', this, 'max')
+          custom_input.bindProperty('step', this, 'step')
+          custom_input.style.width = "100%"
+          custom_input.style.height = "100%"
+          this.shadowRoot.appendChild(custom_input)
+          this.initialized = true
+          this.fire('custom-input-ready', this)
+        }
+      }
+    }
+  })
+</script>
+</polymer-element>
+
+<polymer-element name="input-bool" attributes="value">
+  <template>
+    <link href="custom-inputs.css" rel="stylesheet" type="text/css">
+    <span class="checkbox {{value}}" on-click="{{toggle}}">&nbsp;</span>
+  </template>
+  <script>
+    Polymer('input-bool', {
+      value: false,
+      toggle: function() {
+        this.value = !this.value;
+        this.fire('custom-input-changed', this);
+      }
+    });
+  </script>
+</polymer-element>
+
+<polymer-element name="input-string" attributes="value">
+  <template>
+    <link href="custom-inputs.css" rel="stylesheet" type="text/css">
+    <div id="blocker" on-dblclick="{{focus}}"></div>
+    <input type="text" id="value" value="{{value}}" on-keydown="{{handleKeyCodes}}"></input>
+  </template>
+  <script>
+    Polymer('input-string', {
+      value: "",
+      ready: function() {
+        
+        var scope = this;
+
+        var resetBlocker = function(){
+          rect = scope.getBoundingClientRect();
+          scope.$.blocker.style.width = rect.width + "px";
+          scope.$.blocker.style.height = rect.height + "px";
+        }
+
+        this.$.value.addEventListener('mouseover', resetBlocker);
+      },
+      focus: function() {
+        this.$.value.focus();
+        this.$.value.select();
+      },
+      handleKeyCodes: function(inEvent) {
+        inEvent.stopPropagation();
+        this.fire('custom-input-changed', this);
+      },
+    });
+  </script>
+</polymer-element>
+
+<polymer-element name="input-texture" attributes="value">
+  <template>
+    <link href="custom-inputs.css" rel="stylesheet" type="text/css">
+    <input type="text" value="{{value}}" on-keydown="{{handleKeyCodes}}"></input>
+  </template>
+  <script>
+    Polymer('input-texture', {
+      value: "",
+      handleKeyCodes: function(inEvent) {
+        inEvent.stopPropagation();
+        this.fire('custom-input-changed', this);
+      },
+    });
+  </script>
+</polymer-element>
+
+<polymer-element name="input-float" attributes="value step min max">
+  <template>
+    <link href="custom-inputs.css" rel="stylesheet" type="text/css">
+    <div id="blocker" on-dblclick="{{focus}}"></div>
+    <!-- <input id="number" type="text" value="{{roundedValue}}" on-keydown="{{handleKeyCodes}}"></input> -->
+    <div id="number" on-keydown="{{handleKeyCodes}}" contentEditable>{{roundedValue}}</div>
+  </template>
+  <script>
+    (function() {
+
+      var style = document.createElement('style');
+      style.type = 'text/css';
+      var css = document.createTextNode('body.ew-resize * {cursor: ew-resize} body.all-scroll * {cursor: all-scroll}');
+      style.appendChild(css);
+      document.getElementsByTagName('head')[0].appendChild(style);
+
+      Polymer('input-float', {
+        value: 0,
+        roundedValue: 0,
+        min: -Infinity,
+        max: Infinity,
+        step: 0.01,
+        ready: function() {
+          var scope = this;
+          var delta = 0;
+          var deltaStep = 5;
+          var x = 0
+          var xOld = 0
+          var rect;
+
+          var startDrag = function(event){
+            event.preventDefault();
+            event.stopPropagation();
+            document.body.classList.add("ew-resize")
+            xOld = event.clientX;
+            delta = 0;
+            document.activeElement.blur();
+            document.addEventListener('mousemove', drag, false);
+            document.addEventListener('mouseup', endDrag, false);
+          };
+          var endDrag = function(){
+            document.body.classList.remove("ew-resize")
+            document.removeEventListener('mousemove', drag, false);
+            document.removeEventListener('mouseup', endDrag, false);
+          };
+          var drag = function(event) {
+            x = event.clientX;
+            delta += x-xOld;
+            xOld = event.clientX;
+
+            while (Math.abs(delta)>deltaStep) {
+              if (delta>deltaStep){
+                scope.value += 1 * scope.step;
+                delta -= deltaStep;
+              }
+              if (delta<-deltaStep){
+                scope.value -= 1 * scope.step;
+                delta += deltaStep;
+              }
+            }
+            scope.value = Math.round(scope.value * 10000) / 10000;
+            scope.value = Math.max(scope.value, scope.min);
+            scope.value = Math.min(scope.value, scope.max);
+            // scope.value = scope.roundedValue;
+          };
+          var resetBlocker = function(){
+            rect = scope.getBoundingClientRect();
+            scope.$.blocker.style.width = rect.width + "px";
+            scope.$.blocker.style.height = rect.height + "px";
+          }
+          var onblur = function() {
+            // TODO: fix
+            setTimeout(function(){
+              var newValue = parseFloat(scope.$.number.value);
+              if (!isNaN(newValue)) {
+                scope.value = newValue;
+              }
+            },1);
+          }
+          this.$.number.addEventListener('mouseover', resetBlocker);
+          this.$.blocker.addEventListener('mousedown', startDrag);
+          this.$.number.addEventListener('blur', onblur);
+        },
+        focus: function() {
+          this.$.number.focus();
+          this.$.number.select();
+        },
+        handleKeyCodes: function(inEvent) {
+          inEvent.stopPropagation();
+          var validKeys = [46,48,49,50,51,52,53,54,55,56,57,189,190,37,38,39,40,8,9];
+          var valid = false;
+          for (var i in validKeys){
+            if (inEvent.which == validKeys[i]) valid = true;
+          }
+          if (!valid) inEvent.preventDefault();
+        },
+        valueChanged: function() {
+          this.roundedValue = Math.round(this.value * 10000) / 10000;
+          this.fire('custom-input-changed', this);
+        }
+      });
+
+    }());
+  </script>
+</polymer-element>
+
+<polymer-element name="input-vec2" attributes="value">
+  <template>
+    <link href="custom-inputs.css" rel="stylesheet" type="text/css">
+    <input-float min="{{min}}" max="{{max}}" step="{{step}}" id="x" class="half-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" id="y" class="half-width"></input-float>
+  </template>
+  <script>
+    Polymer('input-vec2', {
+      min: -Infinity,
+      max: Infinity,
+      step: 0.01,
+      value: [0,0],
+      valueChanged: function(){
+        this.$.x.bindProperty('value', this.value, 0);
+        this.$.y.bindProperty('value', this.value, 1);
+      }
+    });
+  </script>
+</polymer-element>
+
+<polymer-element name="input-vec3" attributes="value">
+  <template>
+    <link href="custom-inputs.css" rel="stylesheet" type="text/css">
+    <input-float min="{{min}}" max="{{max}}" step="{{step}}" id="x" class="third-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" id="y" class="third-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" id="z" class="third-width"></input-float>
+  </template>
+  <script>
+    Polymer('input-vec3', {
+      min: -Infinity,
+      max: Infinity,
+      step: 0.01,
+      value: [0,0,0],
+      valueChanged: function(){
+        this.$.x.bindProperty('value', this.value, 0);
+        this.$.y.bindProperty('value', this.value, 1);
+        this.$.z.bindProperty('value', this.value, 2);
+      }
+    });
+  </script>
+</polymer-element>
+
+<polymer-element name="input-vec4" attributes="value">
+  <template>
+    <link href="custom-inputs.css" rel="stylesheet" type="text/css">
+    <input-float min="{{min}}" max="{{max}}" step="{{step}}" id="x" class="quarter-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" id="y" class="quarter-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" id="z" class="quarter-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" id="w" class="quarter-width"></input-float>
+  </template>
+  <script>
+    Polymer('input-vec4', {
+      min: -Infinity,
+      max: Infinity,
+      step: 0.01,
+      value: [0,0,0,0],
+      valueChanged: function(){
+        this.$.x.bindProperty('value', this.value, 0);
+        this.$.y.bindProperty('value', this.value, 1);
+        this.$.z.bindProperty('value', this.value, 2);
+        this.$.w.bindProperty('value', this.value, 3);
+      }
+    });
+  </script>
+</polymer-element>

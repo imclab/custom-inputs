@@ -1,4 +1,16 @@
-<polymer-element name="custom-input" attributes="value min max step type">
+<script>
+  (function() {
+
+    var style = document.createElement('style')
+    style.type = 'text/css'
+    var css = 'body.ew-resize * {cursor: ew-resize} body.all-scroll * {cursor: all-scroll}'
+    style.appendChild(document.createTextNode(css))
+    document.getElementsByTagName('head')[0].appendChild(style)
+
+  }())
+</script>
+
+<polymer-element name="custom-input" attributes="value min max step type toDeg">
 <template>
   <link href="custom-inputs.css" rel="stylesheet" type="text/css">
 </template>
@@ -14,19 +26,29 @@
             if (this.value.length == 2) this.type = 'vec2'
             if (this.value.length == 3) this.type = 'vec3'
             if (this.value.length == 4) this.type = 'vec4'
-          }          
+          }
+          // TODO: make THREE-agnotic 
+          else if ( THREE && this.value instanceof THREE.Vector2 ) this.type = 'vec2'
+          else if ( THREE && this.value instanceof THREE.Vector3 ) this.type = 'vec3'
+          else if ( THREE && this.value instanceof THREE.Euler ) this.type = 'vec3'
+          else if ( THREE && this.value instanceof THREE.Color ) this.type = 'vec3'
+          else if ( THREE && this.value instanceof THREE.Vector4 ) this.type = 'vec4'
+          else if ( THREE && this.value instanceof THREE.Quaternion ) this.type = 'vec4'
         }
         if (this.type) {
-          var custom_input = document.createElement('input-'+this.type)
-          custom_input.bindProperty('value', this, 'value')
-          custom_input.bindProperty('min', this, 'min')
-          custom_input.bindProperty('max', this, 'max')
-          custom_input.bindProperty('step', this, 'step')
-          custom_input.style.width = "100%"
-          custom_input.style.height = "100%"
-          this.shadowRoot.appendChild(custom_input)
+          this.input = document.createElement('input-'+this.type)
+          this.input.bindProperty('value', new PathObserver(this, 'value'))
+          this.input.bindProperty('min', new PathObserver(this, 'min'))
+          this.input.bindProperty('max', new PathObserver(this, 'max'))
+          this.input.bindProperty('step', new PathObserver(this, 'step'))
+          this.input.bindProperty('toDeg', new PathObserver(this, 'toDeg'))
+          this.input.style.width = "100%"
+          this.input.style.height = "100%"
+          this.shadowRoot.appendChild(this.input)
           this.initialized = true
           this.fire('custom-input-ready', this)
+        } else {
+          this.fire('custom-input-unknown', this)
         }
       }
     }
@@ -41,12 +63,11 @@
   </template>
   <script>
     Polymer('input-bool', {
-      value: false,
       toggle: function() {
-        this.value = !this.value;
-        this.fire('custom-input-changed', this);
+        this.value = !this.value
+        this.fire('custom-input-changed', this)
       }
-    });
+    })
   </script>
 </polymer-element>
 
@@ -58,28 +79,26 @@
   </template>
   <script>
     Polymer('input-string', {
-      value: "",
       ready: function() {
-        
-        var scope = this;
+        var scope = this
 
         var resetBlocker = function(){
-          rect = scope.getBoundingClientRect();
-          scope.$.blocker.style.width = rect.width + "px";
-          scope.$.blocker.style.height = rect.height + "px";
+          rect = scope.getBoundingClientRect()
+          scope.$.blocker.style.width = rect.width + "px"
+          scope.$.blocker.style.height = rect.height + "px"
         }
 
-        this.$.value.addEventListener('mouseover', resetBlocker);
+        this.$.value.addEventListener('mouseover', resetBlocker)
       },
       focus: function() {
-        this.$.value.focus();
-        this.$.value.select();
+        this.$.value.focus()
+        this.$.value.select()
       },
       handleKeyCodes: function(inEvent) {
-        inEvent.stopPropagation();
-        this.fire('custom-input-changed', this);
+        inEvent.stopPropagation()
+        this.fire('custom-input-changed', this)
       },
-    });
+    })
   </script>
 </polymer-element>
 
@@ -92,28 +111,21 @@
     Polymer('input-texture', {
       value: "",
       handleKeyCodes: function(inEvent) {
-        inEvent.stopPropagation();
-        this.fire('custom-input-changed', this);
+        inEvent.stopPropagation()
+        this.fire('custom-input-changed', this)
       },
-    });
+    })
   </script>
 </polymer-element>
 
-<polymer-element name="input-float" attributes="value step min max">
+<polymer-element name="input-float" attributes="value step min max toDeg">
   <template>
     <link href="custom-inputs.css" rel="stylesheet" type="text/css">
     <div id="blocker" on-dblclick="{{focus}}"></div>
-    <!-- <input id="number" type="text" value="{{roundedValue}}" on-keydown="{{handleKeyCodes}}"></input> -->
-    <div id="number" on-keydown="{{handleKeyCodes}}" contentEditable>{{roundedValue}}</div>
+    <input id="number" type="text" value="{{roundedValue}}" on-keydown="{{handleKeyCodes}}"></input>
   </template>
   <script>
     (function() {
-
-      var style = document.createElement('style');
-      style.type = 'text/css';
-      var css = document.createTextNode('body.ew-resize * {cursor: ew-resize} body.all-scroll * {cursor: all-scroll}');
-      style.appendChild(css);
-      document.getElementsByTagName('head')[0].appendChild(style);
 
       Polymer('input-float', {
         value: 0,
@@ -121,146 +133,181 @@
         min: -Infinity,
         max: Infinity,
         step: 0.01,
+        toDeg: false,
         ready: function() {
-          var scope = this;
-          var delta = 0;
-          var deltaStep = 5;
+          var scope = this
+          var delta = 0
+          var deltaStep = 5
           var x = 0
           var xOld = 0
-          var rect;
+          var rect
 
           var startDrag = function(event){
-            event.preventDefault();
-            event.stopPropagation();
+            event.preventDefault()
+            event.stopPropagation()
             document.body.classList.add("ew-resize")
-            xOld = event.clientX;
-            delta = 0;
-            document.activeElement.blur();
-            document.addEventListener('mousemove', drag, false);
-            document.addEventListener('mouseup', endDrag, false);
-          };
+            xOld = event.clientX
+            delta = 0
+            document.activeElement.blur()
+            document.addEventListener('mousemove', drag, false)
+            document.addEventListener('mouseup', endDrag, false)
+          }
           var endDrag = function(){
             document.body.classList.remove("ew-resize")
-            document.removeEventListener('mousemove', drag, false);
-            document.removeEventListener('mouseup', endDrag, false);
-          };
+            document.removeEventListener('mousemove', drag, false)
+            document.removeEventListener('mouseup', endDrag, false)
+          }
           var drag = function(event) {
-            x = event.clientX;
-            delta += x-xOld;
-            xOld = event.clientX;
+            x = event.clientX
+            delta += x-xOld
+            xOld = event.clientX
 
             while (Math.abs(delta)>deltaStep) {
               if (delta>deltaStep){
-                scope.value += 1 * scope.step;
-                delta -= deltaStep;
+                scope.value += 1 * scope.step
+                delta -= deltaStep
               }
               if (delta<-deltaStep){
-                scope.value -= 1 * scope.step;
-                delta += deltaStep;
+                scope.value -= 1 * scope.step
+                delta += deltaStep
               }
             }
-            scope.value = Math.round(scope.value * 10000) / 10000;
-            scope.value = Math.max(scope.value, scope.min);
-            scope.value = Math.min(scope.value, scope.max);
-            // scope.value = scope.roundedValue;
-          };
+            scope.value = Math.round(scope.value * 10000) / 10000
+            scope.value = Math.max(scope.value, scope.min)
+            scope.value = Math.min(scope.value, scope.max)
+            // scope.value = scope.roundedValue
+          }
           var resetBlocker = function(){
-            rect = scope.getBoundingClientRect();
-            scope.$.blocker.style.width = rect.width + "px";
-            scope.$.blocker.style.height = rect.height + "px";
+            rect = scope.getBoundingClientRect()
+            scope.$.blocker.style.width = rect.width + "px"
+            scope.$.blocker.style.height = rect.height + "px"
           }
           var onblur = function() {
             // TODO: fix
             setTimeout(function(){
-              var newValue = parseFloat(scope.$.number.value);
+              var newValue = parseFloat(scope.roundedValue)
               if (!isNaN(newValue)) {
-                scope.value = newValue;
+                if (scope.toDeg)
+                  scope.value = newValue/180*Math.PI
+                else
+                  scope.value = newValue
               }
-            },1);
+            },1)
           }
-          this.$.number.addEventListener('mouseover', resetBlocker);
-          this.$.blocker.addEventListener('mousedown', startDrag);
-          this.$.number.addEventListener('blur', onblur);
+          this.addEventListener('mouseenter', resetBlocker)
+          this.$.blocker.addEventListener('mousedown', startDrag)
+          this.$.number.addEventListener('blur', onblur)
+          this.$.number.onfocus = document.execCommand('selectAll',false,null);
         },
         focus: function() {
-          this.$.number.focus();
-          this.$.number.select();
+          this.$.number.focus()
+          this.$.number.select()
         },
         handleKeyCodes: function(inEvent) {
-          inEvent.stopPropagation();
-          var validKeys = [46,48,49,50,51,52,53,54,55,56,57,189,190,37,38,39,40,8,9];
-          var valid = false;
+          inEvent.stopPropagation()
+          var validKeys = [46,48,49,50,51,52,53,54,55,56,57,189,190,37,38,39,40,8,9]
+          var valid = false
           for (var i in validKeys){
-            if (inEvent.which == validKeys[i]) valid = true;
+            if (inEvent.which == validKeys[i]) valid = true
           }
-          if (!valid) inEvent.preventDefault();
+          if (!valid) inEvent.preventDefault()
         },
         valueChanged: function() {
-          this.roundedValue = Math.round(this.value * 10000) / 10000;
-          this.fire('custom-input-changed', this);
-        }
-      });
+          if (this.toDeg)
+            this.roundedValue = this.value/Math.PI*180;
+          else
+            this.roundedValue = this.value;
 
-    }());
+          this.roundedValue = Math.round(this.roundedValue * 10000) / 10000
+          this.fire('custom-input-changed', this)
+        }
+      })
+
+    }())
   </script>
 </polymer-element>
 
 <polymer-element name="input-vec2" attributes="value">
   <template>
     <link href="custom-inputs.css" rel="stylesheet" type="text/css">
-    <input-float min="{{min}}" max="{{max}}" step="{{step}}" id="x" class="half-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" id="y" class="half-width"></input-float>
+    <input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="x" class="half-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="y" class="half-width"></input-float>
   </template>
   <script>
     Polymer('input-vec2', {
       min: -Infinity,
       max: Infinity,
       step: 0.01,
-      value: [0,0],
       valueChanged: function(){
-        this.$.x.bindProperty('value', this.value, 0);
-        this.$.y.bindProperty('value', this.value, 1);
+        if (this.value instanceof Array) {
+          this.$.x.bindProperty('value', new PathObserver(this.value, 0))
+          this.$.y.bindProperty('value', new PathObserver(this.value, 1))
+        } else {
+          // TODO: better type checking
+          this.$.x.bindProperty('value', new PathObserver(this.value, 'x'))
+          this.$.y.bindProperty('value', new PathObserver(this.value, 'y'))
+        }
       }
-    });
+    })
   </script>
 </polymer-element>
 
 <polymer-element name="input-vec3" attributes="value">
   <template>
     <link href="custom-inputs.css" rel="stylesheet" type="text/css">
-    <input-float min="{{min}}" max="{{max}}" step="{{step}}" id="x" class="third-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" id="y" class="third-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" id="z" class="third-width"></input-float>
+    <input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="x" class="third-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="y" class="third-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="z" class="third-width"></input-float>
   </template>
   <script>
     Polymer('input-vec3', {
       min: -Infinity,
       max: Infinity,
       step: 0.01,
-      value: [0,0,0],
       valueChanged: function(){
-        this.$.x.bindProperty('value', this.value, 0);
-        this.$.y.bindProperty('value', this.value, 1);
-        this.$.z.bindProperty('value', this.value, 2);
+        if (this.value instanceof Array) {
+          this.$.x.bindProperty('value', new PathObserver(this.value, 0))
+          this.$.y.bindProperty('value', new PathObserver(this.value, 1))
+          this.$.z.bindProperty('value', new PathObserver(this.value, 2))
+        } else {
+          // TODO: make THREE-agnotic
+          // TODO: better type checking
+          if ( THREE && this.value instanceof THREE.Color ) {
+            this.$.x.bindProperty('value', new PathObserver(this.value, 'r'))
+            this.$.y.bindProperty('value', new PathObserver(this.value, 'g'))
+            this.$.z.bindProperty('value', new PathObserver(this.value, 'b'))
+          } else {
+            this.$.x.bindProperty('value', new PathObserver(this.value, 'x'))
+            this.$.y.bindProperty('value', new PathObserver(this.value, 'y'))
+            this.$.z.bindProperty('value', new PathObserver(this.value, 'z'))
+          }
+        }
       }
-    });
+    })
   </script>
 </polymer-element>
 
 <polymer-element name="input-vec4" attributes="value">
   <template>
     <link href="custom-inputs.css" rel="stylesheet" type="text/css">
-    <input-float min="{{min}}" max="{{max}}" step="{{step}}" id="x" class="quarter-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" id="y" class="quarter-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" id="z" class="quarter-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" id="w" class="quarter-width"></input-float>
+    <input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="x" class="quarter-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="y" class="quarter-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="z" class="quarter-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="w" class="quarter-width"></input-float>
   </template>
   <script>
     Polymer('input-vec4', {
       min: -Infinity,
       max: Infinity,
       step: 0.01,
-      value: [0,0,0,0],
       valueChanged: function(){
-        this.$.x.bindProperty('value', this.value, 0);
-        this.$.y.bindProperty('value', this.value, 1);
-        this.$.z.bindProperty('value', this.value, 2);
-        this.$.w.bindProperty('value', this.value, 3);
+        if (this.value instanceof Array) {
+          this.$.x.bindProperty('value', new PathObserver(this.value, 0))
+          this.$.y.bindProperty('value', new PathObserver(this.value, 1))
+          this.$.z.bindProperty('value', new PathObserver(this.value, 2))
+          this.$.w.bindProperty('value', new PathObserver(this.value, 3))
+        } else {
+          // TODO: better type checking
+          this.$.x.bindProperty('value', new PathObserver(this.value, 'x'))
+          this.$.y.bindProperty('value', new PathObserver(this.value, 'y'))
+          this.$.z.bindProperty('value', new PathObserver(this.value, 'z'))
+          this.$.w.bindProperty('value', new PathObserver(this.value, 'w'))
+        }
       }
-    });
+    })
   </script>
 </polymer-element>

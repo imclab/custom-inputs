@@ -28,12 +28,12 @@
             if (this.value.length == 4) this.type = 'vec4'
           }
           // TODO: make THREE-agnotic 
-          else if ( THREE && this.value instanceof THREE.Vector2 ) this.type = 'vec2'
-          else if ( THREE && this.value instanceof THREE.Vector3 ) this.type = 'vec3'
-          else if ( THREE && this.value instanceof THREE.Euler ) this.type = 'vec3'
-          else if ( THREE && this.value instanceof THREE.Color ) this.type = 'vec3'
-          else if ( THREE && this.value instanceof THREE.Vector4 ) this.type = 'vec4'
-          else if ( THREE && this.value instanceof THREE.Quaternion ) this.type = 'vec4'
+          // else if ( THREE && this.value instanceof THREE.Vector2 ) this.type = 'vec2'
+          // else if ( THREE && this.value instanceof THREE.Vector3 ) this.type = 'vec3'
+          // else if ( THREE && this.value instanceof THREE.Euler ) this.type = 'vec3'
+          // else if ( THREE && this.value instanceof THREE.Color ) this.type = 'vec3'
+          // else if ( THREE && this.value instanceof THREE.Vector4 ) this.type = 'vec4'
+          // else if ( THREE && this.value instanceof THREE.Quaternion ) this.type = 'vec4'
         }
         if (this.type) {
           this.input = document.createElement('input-'+this.type)
@@ -74,26 +74,10 @@
 <polymer-element name="input-string" attributes="value">
   <template>
     <link href="custom-inputs.css" rel="stylesheet" type="text/css">
-    <div id="blocker" on-dblclick="{{focus}}"></div>
     <input type="text" id="value" value="{{value}}" on-keydown="{{handleKeyCodes}}"></input>
   </template>
   <script>
     Polymer('input-string', {
-      ready: function() {
-        var scope = this
-
-        var resetBlocker = function(){
-          rect = scope.getBoundingClientRect()
-          scope.$.blocker.style.width = rect.width + "px"
-          scope.$.blocker.style.height = rect.height + "px"
-        }
-
-        this.$.value.addEventListener('mouseover', resetBlocker)
-      },
-      focus: function() {
-        this.$.value.focus()
-        this.$.value.select()
-      },
       handleKeyCodes: function(inEvent) {
         inEvent.stopPropagation()
         this.fire('custom-input-changed', this)
@@ -242,9 +226,9 @@
           this.$.x.bindProperty('value', new PathObserver(this.value, 0))
           this.$.y.bindProperty('value', new PathObserver(this.value, 1))
         } else {
-          // TODO: better type checking
-          this.$.x.bindProperty('value', new PathObserver(this.value, 'x'))
-          this.$.y.bindProperty('value', new PathObserver(this.value, 'y'))
+          // // TODO: better type checking
+          // this.$.x.bindProperty('value', new PathObserver(this.value, 'x'))
+          // this.$.y.bindProperty('value', new PathObserver(this.value, 'y'))
         }
       }
     })
@@ -269,15 +253,15 @@
         } else {
           // TODO: make THREE-agnotic
           // TODO: better type checking
-          if ( THREE && this.value instanceof THREE.Color ) {
-            this.$.x.bindProperty('value', new PathObserver(this.value, 'r'))
-            this.$.y.bindProperty('value', new PathObserver(this.value, 'g'))
-            this.$.z.bindProperty('value', new PathObserver(this.value, 'b'))
-          } else {
-            this.$.x.bindProperty('value', new PathObserver(this.value, 'x'))
-            this.$.y.bindProperty('value', new PathObserver(this.value, 'y'))
-            this.$.z.bindProperty('value', new PathObserver(this.value, 'z'))
-          }
+          // if ( this.value instanceof THREE.Color ) {
+          //   this.$.x.bindProperty('value', new PathObserver(this.value, 'r'))
+          //   this.$.y.bindProperty('value', new PathObserver(this.value, 'g'))
+          //   this.$.z.bindProperty('value', new PathObserver(this.value, 'b'))
+          // } else {
+          //   this.$.x.bindProperty('value', new PathObserver(this.value, 'x'))
+          //   this.$.y.bindProperty('value', new PathObserver(this.value, 'y'))
+          //   this.$.z.bindProperty('value', new PathObserver(this.value, 'z'))
+          // }
         }
       }
     })
@@ -301,11 +285,11 @@
           this.$.z.bindProperty('value', new PathObserver(this.value, 2))
           this.$.w.bindProperty('value', new PathObserver(this.value, 3))
         } else {
-          // TODO: better type checking
-          this.$.x.bindProperty('value', new PathObserver(this.value, 'x'))
-          this.$.y.bindProperty('value', new PathObserver(this.value, 'y'))
-          this.$.z.bindProperty('value', new PathObserver(this.value, 'z'))
-          this.$.w.bindProperty('value', new PathObserver(this.value, 'w'))
+          // // TODO: better type checking
+          // this.$.x.bindProperty('value', new PathObserver(this.value, 'x'))
+          // this.$.y.bindProperty('value', new PathObserver(this.value, 'y'))
+          // this.$.z.bindProperty('value', new PathObserver(this.value, 'z'))
+          // this.$.w.bindProperty('value', new PathObserver(this.value, 'w'))
         }
       }
     })

@@ -34,6 +34,7 @@
           else if ( THREE && this.value instanceof THREE.Color ) this.type = 'vec3'
           else if ( THREE && this.value instanceof THREE.Vector4 ) this.type = 'vec4'
           else if ( THREE && this.value instanceof THREE.Quaternion ) this.type = 'vec4'
+          else if ( THREE && this.value instanceof THREE.Texture ) this.type = 'texture'
         }
         if (this.type) {
           this.input = document.createElement('input-'+this.type)
@@ -105,11 +106,89 @@
 <polymer-element name="input-texture" attributes="value">
   <template>
     <link href="custom-inputs.css" rel="stylesheet" type="text/css">
-    <input type="text" value="{{value}}" on-keydown="{{handleKeyCodes}}"></input>
+    <input type="text" value="{{value.sourceFile}}" on-keydown="{{handleKeyCodes}}"></input>
+<!--     <img id="image" src="{{value.sourceFile}}" width="100%" />
+    <video id="video" autoplay loop width="100%" style="display: block" >
+      <source src="{{value.sourceFile}}" type='video/mp4'>
+    </video> -->
+    <div id="thumbnail"></div>
   </template>
   <script>
     Polymer('input-texture', {
       value: "",
+      ready: function() {
+
+        var scope = this;
+        //TEMP for stratus
+        function toBlob(data_url) {
+          var d = atob(data_url.split(',')[1]);
+          var b = new Uint8Array(d.length);
+          for (var i = 0; i < d.length; i++) {
+            b[i] = d.charCodeAt(i);
+          }
+          var type = data_url.split(',')[0].split(':')[1].split(';')[0]
+          return new Blob([b], {type: type});
+        }
+
+        // drag and drop
+        this.addEventListener( 'dragover', function ( event ) {
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'copy';
+        }, false );
+
+        this.addEventListener( 'drop', function ( event ) {
+          event.preventDefault();
+          var file = event.dataTransfer.files[ 0 ]
+          var reader = new FileReader();
+          reader.addEventListener( 'load', function ( event ) {
+            var data = new FormData();
+            data.append('blob', toBlob(event.target.result), file.name);
+             $.get('/api/files/create', function(d) {
+              $.ajax({
+                type: 'POST',
+                url: d.upload_url,
+                data: data,
+                cache: false,
+                contentType: false,
+                processData: false,
+                success: function(items) {
+                  scope.value.sourceFile = '/api/files/' + items[0].Id
+                  if (items[0].content_type == "video/mp4") {
+                    var video = document.createElement('video');
+                    video.setAttribute('autoplay', true);
+                    video.setAttribute('loop', true);
+                    var source = document.createElement('source');
+                    source.setAttribute('src', scope.value.sourceFile);
+                    source.setAttribute('type', 'video/mp4');
+                    video.appendChild(source)
+                    scope.value.image = video;
+                    scope.value.isVideo = true
+                  } else {
+                    var image = document.createElement('image');
+                    image.setAttribute('src', scope.value.sourceFile);
+                    scope.value.image = image;
+                    scope.value.isVideo = false
+                  }
+                  scope.valueChanged()
+                }
+              });
+            }); 
+
+          }, false );
+          reader.readAsDataURL(file);
+
+        }, false );
+      },
+      valueChanged: function() {
+        var scope = this;
+        setTimeout(function(){
+          scope.value.image = ShadowDOMPolyfill.wrapIfNeeded(scope.value.image)
+          scope.value.image.setAttribute('width', '100%')
+          scope.$.thumbnail.innerHTML = '';
+          scope.$.thumbnail.appendChild(scope.value.image);
+          scope.value.needsUpdate = true
+        },1000)
+      },
       handleKeyCodes: function(inEvent) {
         inEvent.stopPropagation()
         this.fire('custom-input-changed', this)

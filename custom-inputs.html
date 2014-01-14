@@ -75,26 +75,10 @@
 <polymer-element name="input-string" attributes="value">
   <template>
     <link href="custom-inputs.css" rel="stylesheet" type="text/css">
-    <div id="blocker" on-dblclick="{{focus}}"></div>
     <input type="text" id="value" value="{{value}}" on-keydown="{{handleKeyCodes}}"></input>
   </template>
   <script>
     Polymer('input-string', {
-      ready: function() {
-        var scope = this
-
-        var resetBlocker = function(){
-          rect = scope.getBoundingClientRect()
-          scope.$.blocker.style.width = rect.width + "px"
-          scope.$.blocker.style.height = rect.height + "px"
-        }
-
-        this.$.value.addEventListener('mouseover', resetBlocker)
-      },
-      focus: function() {
-        this.$.value.focus()
-        this.$.value.select()
-      },
       handleKeyCodes: function(inEvent) {
         inEvent.stopPropagation()
         this.fire('custom-input-changed', this)
@@ -321,7 +305,7 @@
           this.$.x.bindProperty('value', new PathObserver(this.value, 0))
           this.$.y.bindProperty('value', new PathObserver(this.value, 1))
         } else {
-          // TODO: better type checking
+          // // TODO: better type checking
           this.$.x.bindProperty('value', new PathObserver(this.value, 'x'))
           this.$.y.bindProperty('value', new PathObserver(this.value, 'y'))
         }
@@ -348,7 +332,7 @@
         } else {
           // TODO: make THREE-agnotic
           // TODO: better type checking
-          if ( THREE && this.value instanceof THREE.Color ) {
+          if ( this.value instanceof THREE.Color ) {
             this.$.x.bindProperty('value', new PathObserver(this.value, 'r'))
             this.$.y.bindProperty('value', new PathObserver(this.value, 'g'))
             this.$.z.bindProperty('value', new PathObserver(this.value, 'b'))
@@ -380,7 +364,7 @@
           this.$.z.bindProperty('value', new PathObserver(this.value, 2))
           this.$.w.bindProperty('value', new PathObserver(this.value, 3))
         } else {
-          // TODO: better type checking
+          // // TODO: better type checking
           this.$.x.bindProperty('value', new PathObserver(this.value, 'x'))
           this.$.y.bindProperty('value', new PathObserver(this.value, 'y'))
           this.$.z.bindProperty('value', new PathObserver(this.value, 'z'))

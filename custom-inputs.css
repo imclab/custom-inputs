@@ -13,7 +13,7 @@
     font-size: inherit;
     line-height: inherit;
     border: 0;
-    cursor: default;
+    cursor: inherit;
   }
   * > textarea:focus, * > input:focus, * > span:focus{
     outline: 0;

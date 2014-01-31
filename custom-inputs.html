@@ -1,12 +1,10 @@
 <script>
   (function() {
-
     var style = document.createElement('style')
     style.type = 'text/css'
-    var css = 'body.ew-resize * {cursor: ew-resize} body.all-scroll * {cursor: all-scroll}'
+    var css = 'body.ew-resize * {cursor: ew-resize}'
     style.appendChild(document.createTextNode(css))
     document.getElementsByTagName('head')[0].appendChild(style)
-
   }())
 </script>
 
@@ -16,7 +14,6 @@
 </template>
 <script>
   Polymer('custom-input', {
-    value: undefined,
     valueChanged: function() {
       if (!this.initialized){
         if (!this.type) {
@@ -29,13 +26,12 @@
             if (this.value.length == 4) this.type = 'vec4'
           }
           // TODO: make THREE-agnotic 
-          else if ( THREE && this.value instanceof THREE.Vector2 ) this.type = 'vec2'
-          else if ( THREE && this.value instanceof THREE.Vector3 ) this.type = 'vec3'
-          else if ( THREE && this.value instanceof THREE.Euler ) this.type = 'vec3'
-          else if ( THREE && this.value instanceof THREE.Color ) this.type = 'vec3'
-          else if ( THREE && this.value instanceof THREE.Vector4 ) this.type = 'vec4'
-          else if ( THREE && this.value instanceof THREE.Quaternion ) this.type = 'vec4'
-          else if ( THREE && this.value instanceof THREE.Texture ) this.type = 'texture'
+          // else if ( THREE && this.value instanceof THREE.Vector2 ) this.type = 'vec2'
+          // else if ( THREE && this.value instanceof THREE.Vector3 ) this.type = 'vec3'
+          // else if ( THREE && this.value instanceof THREE.Euler ) this.type = 'vec3'
+          // else if ( THREE && this.value instanceof THREE.Color ) this.type = 'vec3'
+          // else if ( THREE && this.value instanceof THREE.Vector4 ) this.type = 'vec4'
+          // else if ( THREE && this.value instanceof THREE.Quaternion ) this.type = 'vec4'
         }
         if (this.type) {
           this.input = document.createElement('input-'+this.type)
@@ -76,7 +72,7 @@
 <polymer-element name="input-string" attributes="value">
   <template>
     <link href="custom-inputs.css" rel="stylesheet" type="text/css">
-    <input type="text" id="value" value="{{value}}" on-keydown="{{handleKeyCodes}}"></input>
+    <input type="text" id="value" value="{{value}}" on-keydown="{{handleKeyCodes}}" spellcheck="false"></input>
   </template>
   <script>
     Polymer('input-string', {
@@ -91,83 +87,15 @@
 <polymer-element name="input-texture" attributes="value">
   <template>
     <link href="custom-inputs.css" rel="stylesheet" type="text/css">
-    {{value.sourceFile}}
-    <div id="thumbnail"></div>
+    <input type="text" value="{{value}}" on-keydown="{{handleKeyCodes}}" spellcheck="false"></input>
   </template>
   <script>
     Polymer('input-texture', {
       value: "",
-      ready: function() {
-
-        var scope = this;
-        //TEMP for stratus
-        function toBlob(data_url) {
-          var d = atob(data_url.split(',')[1]);
-          var b = new Uint8Array(d.length);
-          for (var i = 0; i < d.length; i++) {
-            b[i] = d.charCodeAt(i);
-          }
-          var type = data_url.split(',')[0].split(':')[1].split(';')[0]
-          return new Blob([b], {type: type});
-        }
-
-        // drag and drop
-        this.addEventListener( 'dragover', function ( event ) {
-          event.preventDefault();
-          event.stopPropagation();
-          event.dataTransfer.dropEffect = 'copy';
-        }, false );
-        this.addEventListener( 'drop', function ( event ) {
-          event.preventDefault();
-          event.stopPropagation();
-          var file = event.dataTransfer.files[ 0 ]
-          var reader = new FileReader();
-          reader.addEventListener( 'load', function ( event ) {
-            var data = new FormData();
-            data.append('blob', toBlob(event.target.result), file.name);
-             $.get('/api/files/create', function(d) {
-              $.ajax({
-                type: 'POST',
-                url: d.upload_url,
-                data: data,
-                cache: false,
-                contentType: false,
-                processData: false,
-                success: function(items) {
-                  var src = '/api/files/' + items[0].Id
-                  if (items[0].content_type == "video/mp4") {
-                    scope.fire('texture-src-changed', {
-                      texture: scope.value,
-                      src: src,
-                      isVideo: true
-                    })
-                  } else {
-                    scope.fire('texture-src-changed', {
-                      texture: scope.value,
-                      src: src,
-                      isVideo: false
-                    })
-                  }
-                }
-              });
-            }); 
-
-          }, false );
-          reader.readAsDataURL(file);
-
-        }, false );
+      handleKeyCodes: function(inEvent) {
+        inEvent.stopPropagation()
+        this.fire('custom-input-changed', this)
       },
-      valueChanged: function() {
-        var scope = this;
-        setTimeout(function(){
-          scope.value.image = ShadowDOMPolyfill.wrapIfNeeded(scope.value.image)
-          scope.value.image.setAttribute('width', '100%')
-          scope.$.thumbnail.innerHTML = '';
-          if (scope.value.isVideo) scope.value.image.play();
-          scope.$.thumbnail.appendChild(scope.value.image);
-          scope.value.needsUpdate = true
-        },1000)
-      }
     })
   </script>
 </polymer-element>
@@ -292,14 +220,8 @@
       max: Infinity,
       step: 0.01,
       valueChanged: function(){
-        if (this.value instanceof Array) {
-          this.$.x.bindProperty('value', new PathObserver(this.value, 0))
-          this.$.y.bindProperty('value', new PathObserver(this.value, 1))
-        } else {
-          // // TODO: better type checking
-          this.$.x.bindProperty('value', new PathObserver(this.value, 'x'))
-          this.$.y.bindProperty('value', new PathObserver(this.value, 'y'))
-        }
+        this.$.x.bindProperty('value', new PathObserver(this.value, 0))
+        this.$.y.bindProperty('value', new PathObserver(this.value, 1))
       }
     })
   </script>
@@ -316,23 +238,9 @@
       max: Infinity,
       step: 0.01,
       valueChanged: function(){
-        if (this.value instanceof Array) {
-          this.$.x.bindProperty('value', new PathObserver(this.value, 0))
-          this.$.y.bindProperty('value', new PathObserver(this.value, 1))
-          this.$.z.bindProperty('value', new PathObserver(this.value, 2))
-        } else {
-          // TODO: make THREE-agnotic
-          // TODO: better type checking
-          if ( this.value instanceof THREE.Color ) {
-            this.$.x.bindProperty('value', new PathObserver(this.value, 'r'))
-            this.$.y.bindProperty('value', new PathObserver(this.value, 'g'))
-            this.$.z.bindProperty('value', new PathObserver(this.value, 'b'))
-          } else {
-            this.$.x.bindProperty('value', new PathObserver(this.value, 'x'))
-            this.$.y.bindProperty('value', new PathObserver(this.value, 'y'))
-            this.$.z.bindProperty('value', new PathObserver(this.value, 'z'))
-          }
-        }
+        this.$.x.bindProperty('value', new PathObserver(this.value, 0))
+        this.$.y.bindProperty('value', new PathObserver(this.value, 1))
+        this.$.z.bindProperty('value', new PathObserver(this.value, 2))
       }
     })
   </script>
@@ -349,18 +257,93 @@
       max: Infinity,
       step: 0.01,
       valueChanged: function(){
-        if (this.value instanceof Array) {
-          this.$.x.bindProperty('value', new PathObserver(this.value, 0))
-          this.$.y.bindProperty('value', new PathObserver(this.value, 1))
-          this.$.z.bindProperty('value', new PathObserver(this.value, 2))
-          this.$.w.bindProperty('value', new PathObserver(this.value, 3))
-        } else {
-          // // TODO: better type checking
-          this.$.x.bindProperty('value', new PathObserver(this.value, 'x'))
-          this.$.y.bindProperty('value', new PathObserver(this.value, 'y'))
-          this.$.z.bindProperty('value', new PathObserver(this.value, 'z'))
-          this.$.w.bindProperty('value', new PathObserver(this.value, 'w'))
-        }
+        this.$.x.bindProperty('value', new PathObserver(this.value, 0))
+        this.$.y.bindProperty('value', new PathObserver(this.value, 1))
+        this.$.z.bindProperty('value', new PathObserver(this.value, 2))
+        this.$.w.bindProperty('value', new PathObserver(this.value, 3))
+      }
+    })
+  </script>
+</polymer-element>
+
+<polymer-element name="input-mat2" attributes="value">
+  <template>
+    <link href="custom-inputs.css" rel="stylesheet" type="text/css">
+    <input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m0" class="half-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m1" class="half-width"></input-float><br />
+    <input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m2" class="half-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m3" class="half-width"></input-float>
+  </template>
+  <script>
+    Polymer('input-mat2', {
+      min: -Infinity,
+      max: Infinity,
+      step: 0.01,
+      valueChanged: function(){
+        this.$.m0.bindProperty('value', new PathObserver(this.value, 0))
+        this.$.m1.bindProperty('value', new PathObserver(this.value, 1))
+        this.$.m2.bindProperty('value', new PathObserver(this.value, 2))
+        this.$.m3.bindProperty('value', new PathObserver(this.value, 3))
+      }
+    })
+  </script>
+</polymer-element>
+
+<polymer-element name="input-mat3" attributes="value">
+  <template>
+    <link href="custom-inputs.css" rel="stylesheet" type="text/css">
+    <input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m0" class="third-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m1" class="third-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m2" class="third-width"></input-float><br />
+    <input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m3" class="third-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m4" class="third-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m5" class="third-width"></input-float><br />
+    <input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m6" class="third-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m7" class="third-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m8" class="third-width"></input-float>
+  </template>
+  <script>
+    Polymer('input-mat3', {
+      min: -Infinity,
+      max: Infinity,
+      step: 0.01,
+      valueChanged: function(){
+        this.$.m0.bindProperty('value', new PathObserver(this.value, 0))
+        this.$.m1.bindProperty('value', new PathObserver(this.value, 1))
+        this.$.m2.bindProperty('value', new PathObserver(this.value, 2))
+        this.$.m3.bindProperty('value', new PathObserver(this.value, 3))
+        this.$.m4.bindProperty('value', new PathObserver(this.value, 4))
+        this.$.m5.bindProperty('value', new PathObserver(this.value, 5))
+        this.$.m6.bindProperty('value', new PathObserver(this.value, 6))
+        this.$.m7.bindProperty('value', new PathObserver(this.value, 7))
+        this.$.m8.bindProperty('value', new PathObserver(this.value, 8))
+      }
+    })
+  </script>
+</polymer-element>
+
+<polymer-element name="input-mat4" attributes="value">
+  <template>
+    <link href="custom-inputs.css" rel="stylesheet" type="text/css">
+    <input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m0" class="quarter-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m1" class="quarter-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m2" class="quarter-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m3" class="quarter-width"></input-float><br />
+    <input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m4" class="quarter-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m5" class="quarter-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m6" class="quarter-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m7" class="quarter-width"></input-float><br />
+    <input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m8" class="quarter-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m9" class="quarter-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m10" class="quarter-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m11" class="quarter-width"></input-float><br />
+    <input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m12" class="quarter-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m13" class="quarter-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m14" class="quarter-width"></input-float><input-float min="{{min}}" max="{{max}}" step="{{step}}" toDeg="{{toDeg}}" id="m15" class="quarter-width"></input-float>
+  </template>
+  <script>
+    Polymer('input-mat4', {
+      min: -Infinity,
+      max: Infinity,
+      step: 0.01,
+      valueChanged: function(){
+        this.$.m0.bindProperty('value', new PathObserver(this.value, 0))
+        this.$.m1.bindProperty('value', new PathObserver(this.value, 1))
+        this.$.m2.bindProperty('value', new PathObserver(this.value, 2))
+        this.$.m3.bindProperty('value', new PathObserver(this.value, 3))
+        this.$.m4.bindProperty('value', new PathObserver(this.value, 4))
+        this.$.m5.bindProperty('value', new PathObserver(this.value, 5))
+        this.$.m6.bindProperty('value', new PathObserver(this.value, 6))
+        this.$.m7.bindProperty('value', new PathObserver(this.value, 7))
+        this.$.m8.bindProperty('value', new PathObserver(this.value, 8))
+        this.$.m9.bindProperty('value', new PathObserver(this.value, 9))
+        this.$.m10.bindProperty('value', new PathObserver(this.value, 10))
+        this.$.m11.bindProperty('value', new PathObserver(this.value, 11))
+        this.$.m12.bindProperty('value', new PathObserver(this.value, 12))
+        this.$.m13.bindProperty('value', new PathObserver(this.value, 13))
+        this.$.m14.bindProperty('value', new PathObserver(this.value, 14))
+        this.$.m15.bindProperty('value', new PathObserver(this.value, 15))
       }
     })
   </script>

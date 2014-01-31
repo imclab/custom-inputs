@@ -16,6 +16,7 @@
 </template>
 <script>
   Polymer('custom-input', {
+    value: undefined,
     valueChanged: function() {
       if (!this.initialized){
         if (!this.type) {
@@ -90,11 +91,7 @@
 <polymer-element name="input-texture" attributes="value">
   <template>
     <link href="custom-inputs.css" rel="stylesheet" type="text/css">
-    <input type="text" value="{{value.sourceFile}}" on-keydown="{{handleKeyCodes}}"></input>
-<!--     <img id="image" src="{{value.sourceFile}}" width="100%" />
-    <video id="video" autoplay loop width="100%" style="display: block" >
-      <source src="{{value.sourceFile}}" type='video/mp4'>
-    </video> -->
+    {{value.sourceFile}}
     <div id="thumbnail"></div>
   </template>
   <script>
@@ -117,11 +114,12 @@
         // drag and drop
         this.addEventListener( 'dragover', function ( event ) {
           event.preventDefault();
+          event.stopPropagation();
           event.dataTransfer.dropEffect = 'copy';
         }, false );
-
         this.addEventListener( 'drop', function ( event ) {
           event.preventDefault();
+          event.stopPropagation();
           var file = event.dataTransfer.files[ 0 ]
           var reader = new FileReader();
           reader.addEventListener( 'load', function ( event ) {
@@ -136,24 +134,20 @@
                 contentType: false,
                 processData: false,
                 success: function(items) {
-                  scope.value.sourceFile = '/api/files/' + items[0].Id
+                  var src = '/api/files/' + items[0].Id
                   if (items[0].content_type == "video/mp4") {
-                    var video = document.createElement('video');
-                    video.setAttribute('autoplay', true);
-                    video.setAttribute('loop', true);
-                    var source = document.createElement('source');
-                    source.setAttribute('src', scope.value.sourceFile);
-                    source.setAttribute('type', 'video/mp4');
-                    video.appendChild(source)
-                    scope.value.image = video;
-                    scope.value.isVideo = true
+                    scope.fire('texture-src-changed', {
+                      texture: scope.value,
+                      src: src,
+                      isVideo: true
+                    })
                   } else {
-                    var image = document.createElement('image');
-                    image.setAttribute('src', scope.value.sourceFile);
-                    scope.value.image = image;
-                    scope.value.isVideo = false
+                    scope.fire('texture-src-changed', {
+                      texture: scope.value,
+                      src: src,
+                      isVideo: false
+                    })
                   }
-                  scope.valueChanged()
                 }
               });
             }); 
@@ -169,14 +163,11 @@
           scope.value.image = ShadowDOMPolyfill.wrapIfNeeded(scope.value.image)
           scope.value.image.setAttribute('width', '100%')
           scope.$.thumbnail.innerHTML = '';
+          if (scope.value.isVideo) scope.value.image.play();
           scope.$.thumbnail.appendChild(scope.value.image);
           scope.value.needsUpdate = true
         },1000)
-      },
-      handleKeyCodes: function(inEvent) {
-        inEvent.stopPropagation()
-        this.fire('custom-input-changed', this)
-      },
+      }
     })
   </script>
 </polymer-element>
